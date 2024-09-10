@@ -2,8 +2,14 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
+    "dev": "nodemon",
+    "start": "tsx watch src/index.ts",
+    "devcheck": "exec tsc --watch --noEmit",
+    "build": "exec tsc",
+    "lint": "eslint ./src --fix",
+    "format": "exec prettier ./src/**/*.ts --write",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,5 +18,22 @@
   "dependencies": {
     "express": "^4.19.2",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.10.0",
+    "@tsconfig/node20": "^20.1.4",
+    "@types/eslint__js": "^8.42.3",
+    "@types/express": "^4.17.21",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.5.4",
+    "dotenv": "^16.4.5",
+    "eslint": "^9.10.0",
+    "eslint-config-prettier": "^9.1.0",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.4",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.5.0"
   }
 }

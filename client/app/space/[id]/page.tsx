@@ -1,7 +1,11 @@
-"use client";
+"use client"
 
-import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+
+// socket
+import { socket } from "../../../socket.ts";
+
+// components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -24,16 +28,27 @@ type User = {
   avatarUrl: string;
 };
 
-export default function SpacePage() {
-  const router = useRouter();
-  const { id } = router.query;
+export default function SpacePage({ params }: { params: { id: string } }) {
+  const id = params.id;
   const [users, setUsers] = useState<User[]>([]);
 
+  console.log(id)
   useEffect(() => {
     if (id) {
       fetchUsers(id as string).then(setUsers);
     }
   }, [id]);
+
+  useEffect(() => {
+    // no-op if the socket is already connected
+    console.info("WS: connecting...");
+    socket.connect();
+
+    return () => {
+      console.info("WS: disconnecting...");
+      socket.disconnect();
+    };
+  }, []);
 
   return (
     <div className="container mx-auto p-4">
