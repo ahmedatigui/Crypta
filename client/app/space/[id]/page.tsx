@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 // Mock function to fetch users - replace with actual API call
-const fetchUsers = async (spaceId: string) => {
+const fetchUsers = async () => {
   // Simulating API call
   await new Promise(resolve => setTimeout(resolve, 1000));
   return [
@@ -35,20 +35,50 @@ export default function SpacePage({ params }: { params: { id: string } }) {
   console.log(id)
   useEffect(() => {
     if (id) {
-      fetchUsers(id as string).then(setUsers);
+      fetchUsers().then(setUsers);
     }
   }, [id]);
 
   useEffect(() => {
-    // no-op if the socket is already connected
     console.info("WS: connecting...");
     socket.connect();
 
+    socket.emit('joinRoom', id);
+    socket.emit('sendToRoom', { roomName: id, message: `Hello, ${id} peeps!` });
+
     return () => {
+      console.log("Leaving room...");
+      socket.emit('leaveRoom', id);
       console.info("WS: disconnecting...");
       socket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+
+    socket.on('userJoined', (message) => {
+      console.log(message);
+    });
+
+    socket.on('userLeft', (message) => {
+      console.log(message);
+    });
+
+    socket.on('roomMessage', ({ room, message, sender }) => {
+      console.log(`Message in ${room} from ${sender}: ${message}`);
+    });
+
+    socket.on('usersList', ({numUsers, users}) => console.log({ numUsers, users }));
+
+    return () => {
+      socket.off('userJoined', (message) => console.log(message));
+      socket.off('userLeft', (message) => console.log(message));
+      socket.off('roomMessage', ({ room, message, sender }) => {
+        console.log(`Message in ${room} from ${sender}: ${message}`); 
+      });
+      socket.off('usersList', ({numUsers, users}) => console.log({ numUsers, users }));
+    }
+  })
 
   return (
     <div className="container mx-auto p-4">
