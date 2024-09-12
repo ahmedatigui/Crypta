@@ -17,7 +17,7 @@ export function setupSocketIO(server: HTTPServer, app: Express) {
   io.on('connection', (socket) => {
     console.log(`New connection: ${socket.id}`);
 
-    handleRooms(socket);
+    handleRooms(socket, io);
 
     socket.on('disconnect', () =>
       console.log(`Connection left (${socket.id})`)
