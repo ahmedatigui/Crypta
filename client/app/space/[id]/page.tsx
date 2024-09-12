@@ -10,17 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-// Mock function to fetch users - replace with actual API call
-const fetchUsers = async () => {
-  // Simulating API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return [
-    { id: '1', name: 'Alice', status: 'online', avatarUrl: 'https://example.com/alice.jpg' },
-    { id: '2', name: 'Bob', status: 'offline', avatarUrl: 'https://example.com/bob.jpg' },
-    { id: '3', name: 'Charlie', status: 'away', avatarUrl: 'https://example.com/charlie.jpg' },
-  ];
-};
-
 type User = {
   id: string;
   name: string;
@@ -33,18 +22,15 @@ export default function SpacePage({ params }: { params: { id: string } }) {
   const [users, setUsers] = useState<User[]>([]);
 
   console.log(id)
-  useEffect(() => {
-    if (id) {
-      fetchUsers().then(setUsers);
-    }
-  }, [id]);
 
   useEffect(() => {
+    console.log('wtf1');
     console.info("WS: connecting...");
     socket.connect();
 
     socket.emit('joinRoom', id);
     socket.emit('sendToRoom', { roomName: id, message: `Hello, ${id} peeps!` });
+
 
     return () => {
       console.log("Leaving room...");
@@ -55,7 +41,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
   }, []);
 
   useEffect(() => {
-
+    console.log('wtf2');
     socket.on('userJoined', (message) => {
       console.log(message);
     });
@@ -68,7 +54,12 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       console.log(`Message in ${room} from ${sender}: ${message}`);
     });
 
-    socket.on('usersList', ({numUsers, users}) => console.log({ numUsers, users }));
+    socket.on('usersList', ({numUsers, users}) => {
+      console.log({ numUsers, users });
+      const mu = users.map(user => ({id: user, name: user.slice(0, 5), status: 'online', avatarUrl: `https://robohash.org/${user}`}));
+      console.log(mu);
+      setUsers([...mu]);
+    }, [socket]);
 
     return () => {
       socket.off('userJoined', (message) => console.log(message));
@@ -78,7 +69,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       });
       socket.off('usersList', ({numUsers, users}) => console.log({ numUsers, users }));
     }
-  })
+  }, [socket]);
 
   return (
     <div className="container mx-auto p-4">
