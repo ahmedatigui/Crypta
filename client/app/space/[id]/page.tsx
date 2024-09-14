@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react';
 
-// socket
-import { socket } from "../../../socket.ts";
 
-// components
+import { socket } from "@/socket.ts";
+import { useUserStore } from "@/lib/store/userStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,30 +17,38 @@ type User = {
 };
 
 export default function SpacePage({ params }: { params: { id: string } }) {
-  const id = params.id;
+  const roomId = params.id;
   const [users, setUsers] = useState<User[]>([]);
+  const username = useUserStore((state) => state.username);
+  const updateRoom = useUserStore((state) => state.updateRoom);
+  const updateUserId = useUserStore((state) => state.updateId);
+  const userId = useUserStore((state) => state.id);
 
-  console.log(id)
+  console.log(roomId)
 
   useEffect(() => {
-    console.log('wtf1');
+    updateRoom(roomId);
+
     console.info("WS: connecting...");
     socket.connect();
 
-    socket.emit('joinRoom', id);
-    socket.emit('sendToRoom', { roomName: id, message: `Hello, ${id} peeps!` });
+    socket.emit('joinRoom', { roomName: roomId, username });
+    socket.emit('sendToRoom', { roomName: roomId, sender: username, message: `Hello, ${roomId} peeps!` });
 
 
     return () => {
       console.log("Leaving room...");
-      socket.emit('leaveRoom', id);
+      socket.emit('leaveRoom', { roomName: roomId, username });
       console.info("WS: disconnecting...");
       socket.disconnect();
     };
   }, []);
 
   useEffect(() => {
-    console.log('wtf2');
+    socket.on('connect', () => {
+      updateUserId(socket.id);
+    })
+
     socket.on('userJoined', (message) => {
       console.log(message);
     });
@@ -50,30 +57,37 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       console.log(message);
     });
 
-    socket.on('roomMessage', ({ room, message, sender }) => {
-      console.log(`Message in ${room} from ${sender}: ${message}`);
+    socket.on('roomMessage', ({ roomName, message, sender }) => {
+      console.log(`Message in ${roomName} from ${sender}: ${message}`);
     });
 
-    socket.on('usersList', ({numUsers, users}) => {
-      console.log({ numUsers, users });
-      const mu = users.map(user => ({id: user, name: user.slice(0, 5), status: 'online', avatarUrl: `https://robohash.org/${user}`}));
-      console.log(mu);
-      setUsers([...mu]);
-    }, [socket]);
+    socket.on('usersList', (usersInfo) => {
+      console.log(usersInfo);
+      console.log(userId);
+      const users = usersInfo.map(user => ({id: user.id, name: socket.id === user.id ? `(You) ${user.username}` : user.username, status: 'online', avatarUrl: `https://robohash.org/${user.username}`}));
+      console.log(users);
+      setUsers([...users]);
+    });
 
     return () => {
+      socket.off('connect', () => updateUserId(socket.id))
       socket.off('userJoined', (message) => console.log(message));
       socket.off('userLeft', (message) => console.log(message));
-      socket.off('roomMessage', ({ room, message, sender }) => {
-        console.log(`Message in ${room} from ${sender}: ${message}`); 
+      socket.off('roomMessage', ({ roomName, message, sender }) => {
+        console.log(`Message in ${roomName} from ${sender}: ${message}`); 
       });
-      socket.off('usersList', ({numUsers, users}) => console.log({ numUsers, users }));
+      socket.off('usersList', (usersInfo) => {
+        console.log(usersInfo);
+        const mu = usersInfo.map(user => ({id: user.id, name: userId === user.id ? `(You)${user.username}` : user.username, status: 'online', avatarUrl: `https://robohash.org/${user.username}`}));
+        console.log(mu);
+        //setUsers([...mu]);
+      });
     }
   }, [socket]);
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Space: {id}</h1>
+      <h1 className="text-2xl font-bold mb-4">Space: {roomId}</h1>
       <Card>
         <CardHeader>
           <CardTitle>Connected Users</CardTitle>

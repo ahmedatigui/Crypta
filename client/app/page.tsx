@@ -6,21 +6,49 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useUserStore } from "@/lib/store/userStore";
 
 export default function ChatJoinPage() {
   const [username, setUsername] = useState('');
   const [room, setRoom] = useState('');
+  const [errors, setErrors] = useState({ username: '', room: '' });
+  const updateUsername = useUserStore((state) => state.updateUsername);
   const router = useRouter();
 
   const generateRandomRoom = () => {
     const randomRoom = Math.random().toString(36).substring(2, 8).toUpperCase();
     setRoom(randomRoom);
+    setErrors(prev => ({ ...prev, room: '' }));
   };
 
-  const handleJoin = () => {
-    // Handle join logic here
-    console.log('Joining chat with:', { username, room });
-    if(room) router.push(`/space/${room}`);
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { username: '', room: '' };
+
+    if (username.trim() === '' || username.length < 4 || username.length > 10) {
+      newErrors.username = 'Username is required and must be 4-10 characters long';
+      isValid = false;
+    }
+
+    if (room.trim() === '' || room.length < 4 || room.length > 20) {
+      newErrors.room = 'Room name is required and must be 4-10 characters long'; 
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+
+  const handleJoin = (e) => {
+    e.preventDefault();
+
+    if (validateForm()){
+      console.log('Joining chat with:', { username, room });
+      updateUsername(username);
+      router.push(`/space/${room}`);
+    }
   };
 
   return (
@@ -37,8 +65,17 @@ export default function ChatJoinPage() {
               id="username" 
               placeholder="Enter your username" 
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value)
+                if (errors.username) setErrors(prev => ({ ...prev, username: '' }));
+              }}
+              required
+              maxLength={10}
+              minLength={4}
+              pattern="[a-zA-Z0-9]+"
+              className={errors.username ? 'border-red-500' : ''}
             />
+            {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="room">Room</Label>
@@ -47,12 +84,19 @@ export default function ChatJoinPage() {
                 id="room" 
                 placeholder="Enter room name or generate" 
                 value={room}
-                onChange={(e) => setRoom(e.target.value)}
+                onChange={(e) => {
+                  setRoom(e.target.value)
+                  if (errors.room) setErrors(prev => ({ ...prev, room: '' }));
+                }}
+                required
+                pattern="[a-zA-Z0-9]+"
+                className={errors.room ? 'border-red-500' : ''}
               />
               <Button onClick={generateRandomRoom} variant="outline">
                 Random
               </Button>
             </div>
+            {errors.room && <p className="text-red-500 text-sm mt-1">{errors.room}</p>}
           </div>
         </CardContent>
         <CardFooter>
