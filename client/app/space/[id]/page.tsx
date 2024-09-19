@@ -1,24 +1,27 @@
 "use client"
 
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Rocket, Users } from 'lucide-react';
+import Peer from 'simple-peer';
 
 
 import { socket } from "@/socket";
 import { useUserStore } from "@/lib/store/userStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCard } from "@/components/UserCard";
+import { IncomingRequestDialog } from "@/components/IncomingRequest";
+import { SocketInitRequest, User } from "@/lib/types";
 
-type User = {
-  id: string;
-  name: string;
-  status: 'available' | 'busy';
-  avatarUrl: string;
-};
 
 export default function SpacePage({ params }: { params: { id: string } }) {
   const roomId = params.id;
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [request, setRequest] = useState<SocketInitRequest>();
+  const [peer, setPeer] = useState();
+  const [reqAccepted, setReqAccept] = useState(false);
   const username = useUserStore((state) => state.username);
   const updateRoom = useUserStore((state) => state.updateRoom);
   const updateUserId = useUserStore((state) => state.updateId);
@@ -26,7 +29,35 @@ export default function SpacePage({ params }: { params: { id: string } }) {
 
   console.log(roomId)
 
+
+  const sendRequest = (user) => {
+    const peer = new Peer({ initiator: true });
+    peer.on('signal', (data) => {
+      console.log("Here is offer signal", data);
+      socket.emit('requestToSocket', { roomName: roomId , sender: { id: socket.id, username: username }, receiver: { id: user.id, username: user.name }, sdpOffer: data, message: "Wut up" });
+    });
+
+    setPeer(peer);
+  }
+
+  const onOpenChange = () => {};
+  const onAccept = (data) => {
+    console.log("Here is receiver signal", data);
+    peer.signal(data);
+
+    setReqAccept(true);
+    setIsOpen(false);
+    console.log("Request Accepted");
+  }
+  const onReject = () => {
+    setReqAccept(false);
+    setIsOpen(false);
+    console.log("Request Rejected");
+  };
+
+
   useEffect(() => {
+    if (!username) router.push('/');
     updateRoom(roomId);
 
     console.info("WS: connecting...");
@@ -61,9 +92,11 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       console.log(`Message in ${roomName} from ${sender}: ${message}`);
     });
 
-    socket.on('requestMessage', ({ roomName, message, sender, receiver }) => {
-      if(receiver === socket.id){
-        console.log("Request received: ", { roomName, message, sender, receiver });
+    socket.on('requestMessage', (req: SocketInitRequest) => {
+      if(req.receiver.id === socket.id){
+        console.log("Request received: ", req);
+        setRequest(req);
+        setIsOpen(true);
       }
     });
 
@@ -91,6 +124,28 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     }
   }, [socket]);
 
+  useEffect(() => {
+    if(!peer){
+      const peer = new Peer({ initiator: true });
+      setPeer(peer);
+    }
+
+    peer?.on('connect', () => {
+      console.log('CONNECT');
+    });
+
+    peer?.on('data', (data) => {
+      console.log('MESSAGE:', data);
+    });
+
+    return () => {
+      if (peer) {
+        peer.destroy();
+      }
+    };
+  })
+  
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-semibold mb-6 flex items-center text-gray-800">
@@ -105,11 +160,12 @@ export default function SpacePage({ params }: { params: { id: string } }) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {users.map((user) => (
-              <UserCard key={user.id} user={user} roomName={roomId} />
+              <UserCard key={user.id} user={user} roomName={roomId} sendRequest={sendRequest} />
             ))}
           </div>
         </CardContent>
       </Card>
+      <IncomingRequestDialog isOpen={isOpen} onOpenChange={onOpenChange} request={request} onAccept={onAccept} onReject={onReject} />
     </div>
   );
 }

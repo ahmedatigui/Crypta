@@ -10,12 +10,12 @@ import { Button } from "@/components/ui/button";
 import { StatusChange } from "@/components/StatusChange";
 
 
-export const UserCard = ({ user, roomName }) => {
+export const UserCard = ({ user, roomName, sendRequest }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleRequest = () => {
     console.log({ roomName: roomName , sender: socket.id, receiver: user.id, message: "Wut up" })
-    socket.emit('requestToSocket', { roomName: roomName , sender: socket.id, receiver: user.id, message: "Wut up" });
+    sendRequest(user);
   }
 
 

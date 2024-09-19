@@ -1,4 +1,5 @@
 import { Socket, Server } from 'socket.io';
+import { socketInitRequest } from '../../utils/types';
 
 export function handleRequest(socket: Socket, io: Server) {
 
@@ -10,14 +11,9 @@ export function handleRequest(socket: Socket, io: Server) {
     });
   });
 
-  socket.on('requestToSocket', ({ roomName, sender, receiver, message }: { roomName: string; sender: string; receiver: string; message: string }) => {
-    console.log("req to socket: ", { roomName, sender, receiver, message });
-    socket.to(roomName).emit('requestMessage', {
-      roomName,
-      message,
-      sender,
-      receiver
-    });
+  socket.on('requestToSocket', (socketInitRequest: socketInitRequest) => {
+    console.log("req to socket: ", socketInitRequest);
+    socket.to(socketInitRequest.roomName).emit('requestMessage', socketInitRequest);
   });
 
 }
