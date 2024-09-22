@@ -1,5 +1,5 @@
 import { Socket, Server } from 'socket.io';
-import { socketInitRequest } from '../../utils/types';
+import { SocketInitRequest, SocketInitResponse, SignalReqRes } from '../../utils/types';
 
 export function handleRequest(socket: Socket, io: Server) {
 
@@ -11,9 +11,19 @@ export function handleRequest(socket: Socket, io: Server) {
     });
   });
 
-  socket.on('requestToSocket', (socketInitRequest: socketInitRequest) => {
+  socket.on('requestToSocket', (socketInitRequest: SocketInitRequest) => {
     console.log("req to socket: ", socketInitRequest);
     socket.to(socketInitRequest.roomName).emit('requestMessage', socketInitRequest);
+  });
+
+  socket.on('responseToSocket', (socketInitResponse: SocketInitResponse) => {
+    console.log("res to socket: ", socketInitResponse);
+    socket.to(socketInitResponse.roomName).emit('responseToRequest', socketInitResponse);
+  });
+
+  socket.on('sendSignal', (signalReqRes: SignalReqRes ) => {
+    console.log("received signal: ", signalReqRes);
+    socket.to(signalReqRes.roomName).emit('receiveSignal', signalReqRes);
   });
 
 }
