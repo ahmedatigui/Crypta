@@ -23,6 +23,8 @@ export default function SpacePage({ params }: { params: { id: string } }) {
   const [request, setRequest] = useState<SocketInitRequest>();
   const [response, setResponse] = useState<SocketInitResponse>();
   const [reqAccepted, setReqAccept] = useState(false);
+  const [connected, setConnected] = useState(false);
+
   const username = useUserStore((state) => state.username);
   const updateRoom = useUserStore((state) => state.updateRoom);
   const updateUserId = useUserStore((state) => state.updateId);
@@ -31,7 +33,11 @@ export default function SpacePage({ params }: { params: { id: string } }) {
   console.log(roomId)
 
 
-  const sendRequest = (user) => {
+  const sendRequest = (user, file) => {
+    if (peerRef.current){
+      stopRTCConnection();
+    }
+
     const peer = new Peer({ 
       initiator: true,
       trickle: false,
@@ -48,13 +54,42 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     console.log("PEER from sendRequest: ", peer);
     peer.on('signal', (data) => {
       console.log("Here is offer signal", data);
-      console.log('requestToSocket', { roomName: roomId , sender: { id: socket.id, username: username }, receiver: { id: user.id, username: user.name }, signal: data }); 
-      socket.emit('requestToSocket', { roomName: roomId , sender: { id: socket.id, username: username }, receiver: { id: user.id, username: user.name }, signal: data });
+      console.log('requestToSocket', { roomName: roomId , sender: { id: socket.id, username: username }, receiver: { id: user.id, username: user.name }, signal: data, info: { name: file.name, type: file.type, size: file.size } }); 
+      socket.emit('requestToSocket', { roomName: roomId , sender: { id: socket.id, username: username }, receiver: { id: user.id, username: user.name }, signal: data, info: { name: file.name, type: file.type, size: file.size } });
     });
 
+
+    const chunkSize = 16 * 1024; // 16KB per chunk
+    let offset = 0;
     peer.on('connect', () => {
+      setConnected(true);
       console.log("Connected!");
+
+      async function sendFile(){
+        const chunk = file.slice(offset, offset + chunkSize);
+        if (chunk.size === 0){
+          peer.send("DONE");
+          return;
+        }
+
+        try {
+          const arrayBuffer = await chunk.arrayBuffer();
+          peer.send(arrayBuffer);
+
+          offset += chunkSize;
+
+          setTimeout(sendFile, 10);
+        } catch (error) {
+          console.error('Error reading chunk:', error);
+        }
+      }
+
+      sendFile();
+
     });
+
+
+
 
     peerRef.current = peer;
     console.log('peerRef.current', peerRef.current);
@@ -70,13 +105,51 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     });
 
     peer.on('connect', () => {
+      setConnected(true);
       console.log("Connected!");
+    });
+
+
+    let receivedChunks = [];
+    let receivedFileSize = 0;
+    peer.on('data', (data) => {
+      const decdata = new TextDecoder().decode(data);
+      console.log("DATA: ", data);
+      //console.log("SIG: ",  decdata);
+
+      if (decdata === "DONE"){
+          const receivedBlob = new Blob(receivedChunks);
+          const url = URL.createObjectURL(receivedBlob);
+          console.log("URL: ", url);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = request.info.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          URL.revokeObjectURL(url);
+          receivedChunks = [];
+      } else {
+        receivedChunks.push(data);
+        receivedFileSize += data.byteLength;
+
+        console.log(`Received chunk: ${data.byteLength} bytes, Total: ${receivedFileSize} bytes`);
+      }
     });
 
     peer.signal(request.signal);
 
     peerRef.current = peer;
     console.log('peerRef.current', peerRef.current);
+  }
+
+  const stopRTCConnection = () => {
+    if (peerRef.current){
+      console.log("STOPPING RTC CONNECTION")
+      peerRef.current.removeAllListeners();
+      peerRef.current.destroy();
+    }
   }
 
   const onOpenChange = () => {};
@@ -93,7 +166,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     setReqAccept(false);
     setIsOpen(false);
     console.log("Request Rejected");
-    socket.emit('responseToSocket', { roomName: roomId , receiver: { id: request.sender.id, username: request.sender.username }, sender: { id: socket.id, username: username }, accepted: false });
+    socket.emit('responseToSocket', { roomName: roomId , sender: { id: socket.id, username: username }, receiver: { id: request.sender.id, username: request.sender.username }, signal: null, accepted: false }); 
   };
 
 
@@ -111,6 +184,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     return () => {
       console.log("Leaving room...");
       socket.emit('leaveRoom', { roomName: roomId, username });
+      stopRTCConnection();
       console.info("WS: disconnecting...");
       socket.disconnect();
     };
@@ -144,7 +218,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     socket.on('responseToRequest', (res: SocketInitResponse) => {
       if(res.receiver.id === socket.id){
         setResponse(res);
-        console.log("Response received: ", response);
+        console.log("Response received: ", res);
         if (res.accepted) {
           console.log("Did it connect?");
           console.log("here is the peerRef", peerRef.current);

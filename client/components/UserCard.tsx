@@ -1,24 +1,13 @@
-import { useState } from "react";
-import { Radio } from 'lucide-react';
-
 import { socket } from "@/socket";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { StatusChange } from "@/components/StatusChange";
+import { ShareFileButton } from "@/components/ShareFileButton";
 
 
 export const UserCard = ({ user, roomName, sendRequest }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handleRequest = () => {
-    console.log({ roomName: roomName , sender: socket.id, receiver: user.id, message: "Wut up" })
-    sendRequest(user);
-  }
-
-
   return (
     <Card className="relative overflow-hidden transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg">
       <div className="absolute top-0 right-0 m-2">
@@ -39,16 +28,7 @@ export const UserCard = ({ user, roomName, sendRequest }) => {
           <p className="text-sm text-gray-500">Cosmic Explorer</p>
         </div>
         { socket.id !== user.id ?
-          <Button
-            className={`w-full transition-all duration-300 ease-in-out ${isHovered ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : ''}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleRequest}
-            disabled={user.status !== 'available'}
-          >
-            <Radio className={`mr-2 h-4 w-4 text-green-500"`} />
-            Request
-          </Button>
+          <ShareFileButton user={user} roomName={roomName} sendRequest={sendRequest} />
           :
           <StatusChange />
         }

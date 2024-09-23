@@ -12,10 +12,11 @@ type SocketInit = {
 
 export type SocketInitRequest = SocketInit & { 
   signal: any;
-  message: string  | undefined | null
+  info: string  | undefined | null
 };
 
 export type SocketInitResponse = SocketInit & {
+  signal: any;
   accepted: boolean
 };
 
