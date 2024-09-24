@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
+import { toast } from "sonner";
+import { Share2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 
 export const ShareFileButton = ({ user, roomName, sendRequest }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    setSelectedFile(file);
-    // You can then share the file via WebRTC, sockets, or other methods
+    //setSelectedFile(file);
     console.log('File selected:', file);
     //console.log({ roomName: roomName , sender: socket.id, receiver: user.id, message: "Wut up" })
+    toast.info(`"${file.name}" has been selected!`, { duration: 2000 });
     sendRequest(user, file);
   };
 
@@ -29,14 +31,9 @@ export const ShareFileButton = ({ user, roomName, sendRequest }) => {
         onMouseLeave={() => setIsHovered(false)}
         disabled={user.status !== 'available'}
       >
+        <Share2 size={16} className='mr-2' />
         Share File
       </Button>
-
-      {selectedFile && (
-        <div className="text-gray-700">
-          Selected File: <strong>{selectedFile.name}</strong>
-        </div>
-      )}
     </div>
   );
 };

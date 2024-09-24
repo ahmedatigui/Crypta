@@ -1,5 +1,5 @@
 import { Socket, Server } from 'socket.io';
-import { SocketInitRequest, SocketInitResponse, SignalReqRes } from '../../utils/types';
+import { SocketInitRequest, SocketInitResponse, SignalReqRes, SocketInit } from '../../lib/types';
 
 export function handleRequest(socket: Socket, io: Server) {
 
@@ -24,6 +24,12 @@ export function handleRequest(socket: Socket, io: Server) {
   socket.on('sendSignal', (signalReqRes: SignalReqRes ) => {
     console.log("received signal: ", signalReqRes);
     socket.to(signalReqRes.roomName).emit('receiveSignal', signalReqRes);
+  });
+
+  socket.on('cancelSharingEvent', (info: SocketInit) => {
+    console.log("Sharing Canceled: ", info);
+    socket.to(info.roomName).emit('sharingEventCanceled', info);
+
   });
 
 }

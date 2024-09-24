@@ -2,7 +2,7 @@ import React from 'react';
 
 import { socket } from "@/socket";
 import { useUserStore } from "@/lib/store/userStore";
-import { Check, Clock } from 'lucide-react';
+import { CircleUser, Clock } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select"
 
 const statusOptions = [
-  { value: 'available', label: 'Available', icon: Check },
+  { value: 'available', label: 'Available', icon: CircleUser },
   { value: 'busy', label: 'Busy', icon: Clock },
 ];
 

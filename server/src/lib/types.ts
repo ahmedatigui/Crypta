@@ -1,4 +1,4 @@
-type SocketInit = {
+export type SocketInit = {
   roomName: string;
   sender: {
     id: string | undefined | null;

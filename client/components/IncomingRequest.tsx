@@ -29,7 +29,7 @@ export const IncomingRequestDialog = ({ isOpen, onOpenChange, request, onAccept,
             <h4 className="text-sm font-semibold">{request?.sender?.name}</h4>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">{request?.info.name}</p>
+        <p className="text-sm text-muted-foreground">{request?.file.name}</p>
         <DialogFooter className="sm:justify-start">
           <Button variant="secondary" onClick={onReject}>
             Reject

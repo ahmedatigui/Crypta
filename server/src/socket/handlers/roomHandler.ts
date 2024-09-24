@@ -1,5 +1,5 @@
 import { Socket, Server } from 'socket.io';
-import { getUsersInfo } from '../../utils/helpers';
+import { getUsersInfo } from '../../lib/helpers';
 
 export function handleRooms(socket: Socket, io: Server) {
   // Join a room
