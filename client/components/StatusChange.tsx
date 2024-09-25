@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { socket } from "@/socket";
-import { useUserStore } from "@/lib/store/userStore";
+import { socket } from '@/socket';
+import { useUserStore } from '@/lib/store/userStore';
 import { CircleUser, Clock } from 'lucide-react';
 import {
   Select,
@@ -9,7 +9,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
+import { Status } from '@/lib/types';
 
 const statusOptions = [
   { value: 'available', label: 'Available', icon: CircleUser },
@@ -19,9 +20,12 @@ const statusOptions = [
 export const StatusChange = ({ initialStatus = 'available' }) => {
   const roomName = useUserStore((state) => state.room);
 
-
-  const handleValueChange = (newStatus) => {
-    socket.emit("changeStatus", { user: socket.id, status: newStatus, roomName });
+  const handleValueChange = (newStatus: Status) => {
+    socket.emit('changeStatus', {
+      user: socket.id,
+      status: newStatus,
+      roomName,
+    });
   };
 
   return (
@@ -42,4 +46,3 @@ export const StatusChange = ({ initialStatus = 'available' }) => {
     </Select>
   );
 };
-

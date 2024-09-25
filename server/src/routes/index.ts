@@ -7,7 +7,7 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 router.get('/api', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to the API' });
+  res.json ({ message: 'API is running' });
 });
 
 export default router;

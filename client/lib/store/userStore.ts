@@ -2,19 +2,19 @@ import { create } from 'zustand';
 
 interface UserState {
   username: string;
-  id: string | number;
+  id: string | undefined;
   room: string;
-  updateUsername: () => void;
-  updateId: () => void;
-  updateRoom: () => void;
+  updateUsername: (arg: string) => void;
+  updateId: (arg: string | undefined) => void;
+  updateRoom: (arg: string) => void;
 }
 
 export const useUserStore = create<UserState>((set) => ({
   username: '',
   id: '',
   room: '',
-  updateUsername: (newUsername) => set(() => ({ username: newUsername })),
-  updateId: (newId) => set(() => ({ id: newId })),
-  updateRoom: (newRoom) => set(() => ({ room: newRoom }))
+  updateUsername: (newUsername: string) => set(() => ({ username: newUsername })),
+  updateId: (newId: string | undefined) => set(() => ({ id: newId })),
+  updateRoom: (newRoom: string) => set(() => ({ room: newRoom }))
 }));
 

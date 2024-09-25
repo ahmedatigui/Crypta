@@ -21,7 +21,7 @@ export function setupSocketIO(server: HTTPServer, app: Express) {
 
     handleRooms(socket, io);
     handleStatus(socket, io);
-    handleRequest(socket, io);
+    handleRequest(socket);
 
     socket.on('disconnect', () =>
       console.log(`Connection left (${socket.id})`)

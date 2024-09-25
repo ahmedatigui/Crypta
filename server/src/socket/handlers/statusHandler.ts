@@ -3,7 +3,7 @@ import { getUsersInfo } from '../../lib/helpers';
 
 export function handleStatus(socket: Socket, io: Server) {
 
-  socket.on("changeStatus", async ({ user, status, roomName }: { user: string; status: string; roomName: string }) => {
+  socket.on("changeStatus", async ({ status, roomName }: { status: string; roomName: string }) => {
     socket.data.status = status;
 
     const usersInfo = await getUsersInfo(io, roomName);

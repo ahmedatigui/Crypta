@@ -1,3 +1,7 @@
+import Peer from 'simple-peer';
+
+export type Status = 'available' | 'busy';
+
 export type SocketInit = {
   roomName: string;
   sender: {
@@ -11,18 +15,28 @@ export type SocketInit = {
 }
 
 export type SocketInitRequest = SocketInit & { 
-  signal: any;
-  info: string  | undefined | null
+  signal: string | Peer.SignalData;
+  file: { 
+    name: string, 
+    type: string | undefined | null, 
+    size: string 
+  };
 };
 
 export type SocketInitResponse = SocketInit & {
-  signal: any;
+  signal: string | Peer.SignalData;
   accepted: boolean
 };
 
 export type User = {
   id: string;
   name: string;
-  status: 'available' | 'busy';
+  status: Status;
   avatarUrl: string;
 };
+
+export type UsersInfo = {
+  username: string;
+  status: Status;
+  id: string;
+}

@@ -1,3 +1,6 @@
+export type Status = 'available' | 'busy';
+
+
 export type SocketInit = {
   roomName: string;
   sender: {
@@ -11,15 +14,21 @@ export type SocketInit = {
 };
 
 export type SocketInitRequest = SocketInit & {
-  signal: any;
+  signal: unknown;
   info: string | undefined | null;
 };
 
 export type SocketInitResponse = SocketInit & {
-  signal: any;
+  signal: unknown;
   accepted: boolean;
 };
 
 export type SignalReqRes = SocketInit & {
   signal: string;
 };
+
+export type UsersInfo = {
+  username: string;
+  status: Status;
+  id: string;
+}

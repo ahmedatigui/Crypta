@@ -1,7 +1,7 @@
-import { Socket, Server } from 'socket.io';
+import { Socket } from 'socket.io';
 import { SocketInitRequest, SocketInitResponse, SignalReqRes, SocketInit } from '../../lib/types';
 
-export function handleRequest(socket: Socket, io: Server) {
+export function handleRequest(socket: Socket) {
 
   socket.on('sendToRoom', ({ roomName, sender, message }: { roomName: string; sender: string; message: string }) => { 
     socket.to(roomName).emit('roomMessage', {
