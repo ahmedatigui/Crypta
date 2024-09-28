@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # install pnpm
-curl -fsSL https://get.pnpm.io/install.sh | sh -
+RUN curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 RUN npm install
 
