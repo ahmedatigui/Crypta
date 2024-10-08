@@ -38,7 +38,11 @@ export const ShareFileButton = ({
         onChange={handleFileChange}
       />
       <Button
-        onClick={() => document.getElementById('file-input')!.click()}
+        onClick={() => {
+          const fl = document.getElementById('file-input')! as HTMLInputElement;
+          fl.value = '';
+          fl.click();
+        }}
         className={`w-full transition-all duration-300 ease-in-out ${
           isHovered ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : ''
         }`}

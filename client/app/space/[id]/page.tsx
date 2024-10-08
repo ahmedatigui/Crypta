@@ -19,24 +19,25 @@ import {
   UsersInfo,
 } from '@/lib/types';
 import { formatFileSize } from '@/lib/utils';
+import { getIceServers } from '@/actions/getRemoteServers';
 
 export default function SpacePage({ params }: { params: { id: string } }) {
   const roomId = params.id;
   const peerRef = useRef<Peer.Instance | null>();
   const router = useRouter();
+
   const [users, setUsers] = useState<User[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [request, setRequest] = useState<SocketInitRequest>();
-  const [connected , setConnected] = useState(false);
-  const [, setResponse] = useState<SocketInitResponse>();
+  const [request, setRequest] = useState<SocketInitRequest | null>();
+  const [connected, setConnected] = useState(false);
+  const [, setResponse] = useState<SocketInitResponse | null>();
   const [, setReqAccept] = useState(false);
+  const [remoteIceServers, setRemoteIceServers] = useState<never[]>([]);
 
   const username = useUserStore((state) => state.username);
   const updateRoom = useUserStore((state) => state.updateRoom);
   const updateUserId = useUserStore((state) => state.updateId);
   const userId = useUserStore((state) => state.id);
-
-  console.log(roomId);
 
   const sendRequest = (user: User, file: File) => {
     socket.emit('changeStatus', {
@@ -54,25 +55,21 @@ export default function SpacePage({ params }: { params: { id: string } }) {
           { urls: 'stun:stun2.l.google.com:19302' },
           { urls: 'stun:stun3.l.google.com:19302' },
           { urls: 'stun:stun4.l.google.com:19302' },
+          ...remoteIceServers,
         ],
       },
     });
-    console.log('PEER from sendRequest: ', peer);
     peer.on('signal', (data) => {
-      console.log('Here is offer signal', data);
-      console.log('requestToSocket', {
-        roomName: roomId,
-        sender: { id: socket.id, username: username },
-        receiver: { id: user.id, username: user.name },
-        signal: data,
-        file: { name: file.name, type: file.type, size: formatFileSize(file.size) },
-      });
       socket.emit('requestToSocket', {
         roomName: roomId,
         sender: { id: socket.id, username: username },
         receiver: { id: user.id, username: user.name },
         signal: data,
-        file: { name: file.name, type: file.type, size: formatFileSize(file.size) },
+        file: {
+          name: file.name,
+          type: file.type,
+          size: formatFileSize(file.size),
+        },
       });
       toast.info(`Sent a request to ${user.name}`, { duration: 2000 });
     });
@@ -91,7 +88,6 @@ export default function SpacePage({ params }: { params: { id: string } }) {
           toast.dismiss(sendingToast);
           toast.success(`${file.name} has been Sent!`, { duration: 5000 });
           stopRTCConnection();
-          setConnected(false);
           socket.emit('changeStatus', {
             user: socket.id,
             status: 'available',
@@ -127,7 +123,6 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     });
 
     peerRef.current = peer;
-    console.log('peerRef.current', peerRef.current);
   };
 
   const acceptRequest = () => {
@@ -137,19 +132,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       roomName: roomId,
     });
     const peer = new Peer({ initiator: false, trickle: false });
-    console.log('PEER from acceptRequest: ', peer);
     peer.on('signal', (data) => {
-      console.log('Here is dest signal', data);
-      console.log('responseToSocket', {
-        roomName: roomId,
-        sender: { id: socket.id, username: username },
-        receiver: {
-          id: request?.sender?.id,
-          username: request?.sender?.username,
-        },
-        signal: data,
-        accepted: true,
-      });
       socket.emit('responseToSocket', {
         roomName: roomId,
         sender: { id: socket.id, username: username },
@@ -184,11 +167,10 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     });
 
     let receivedChunks: BlobPart[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let receivedFileSize = 0;
     peer.on('data', (data) => {
       const decdata = new TextDecoder().decode(data);
-      console.log('DATA: ', data);
-      //console.log("SIG: ",  decdata);
 
       if (decdata === 'DONE') {
         toast.dismiss(receivingToast);
@@ -216,17 +198,12 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       } else {
         receivedChunks.push(data);
         receivedFileSize += data.byteLength;
-
-        console.log(
-          `Received chunk: ${data.byteLength} bytes, Total: ${receivedFileSize} bytes`
-        );
       }
     });
 
     if (request?.signal) peer.signal(request.signal);
 
     peerRef.current = peer;
-    console.log('peerRef.current', peerRef.current);
   };
 
   const stopRTCConnection = () => {
@@ -234,34 +211,35 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       console.log('STOPPING RTC CONNECTION');
       peerRef.current.removeAllListeners();
       peerRef.current.destroy();
+      peerRef.current = null;
       toast.dismiss();
       socket.emit('changeStatus', {
         user: socket.id,
         status: 'available',
         roomName: roomId,
       });
+      setResponse(null);
+      setRequest(null);
+      setReqAccept(false);
+      setConnected(false);
     }
   };
 
   const cancelSharingEvent = (info: SocketInit) => {
     stopRTCConnection();
-    setConnected(false);
     socket.emit('cancelSharingEvent', info);
   };
 
   const onOpenChange = () => {};
   const onAccept = () => {
-    console.log('request: ', request);
     acceptRequest();
 
     setReqAccept(true);
     setIsOpen(false);
-    console.log('Request Accepted');
   };
   const onReject = () => {
     setReqAccept(false);
     setIsOpen(false);
-    console.log('Request Rejected');
     socket.emit('responseToSocket', {
       roomName: roomId,
       sender: { id: socket.id, username: username },
@@ -283,6 +261,13 @@ export default function SpacePage({ params }: { params: { id: string } }) {
       status: 'available',
       username,
     });
+
+    async function fetchServers() {
+      const data = await getIceServers();
+      setRemoteIceServers(data);
+    }
+    fetchServers();
+
     socket.emit('sendToRoom', {
       roomName: roomId,
       sender: username,
@@ -290,7 +275,6 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     });
 
     return () => {
-      console.log('Leaving room...');
       socket.emit('leaveRoom', { roomName: roomId, username });
       stopRTCConnection();
       console.info('WS: disconnecting...');
@@ -317,7 +301,6 @@ export default function SpacePage({ params }: { params: { id: string } }) {
 
     socket.on('requestMessage', (req: SocketInitRequest) => {
       if (req.receiver.id === socket.id) {
-        console.log('Request received: ', req);
         toast.info(`Request received from ${req.sender.username}`, {
           duration: 2000,
         });
@@ -329,10 +312,7 @@ export default function SpacePage({ params }: { params: { id: string } }) {
     socket.on('responseToRequest', (res: SocketInitResponse) => {
       if (res.receiver.id === socket.id) {
         setResponse(res);
-        console.log('Response received: ', res);
         if (res.accepted) {
-          console.log('Did it connect?');
-          console.log('here is the peerRef', peerRef.current);
           toast.success(`Request to ${res.sender.username} is Accepted!`, {
             duration: 2000,
           });
@@ -341,26 +321,28 @@ export default function SpacePage({ params }: { params: { id: string } }) {
           toast.error(`Request to ${res.sender.username} is Rejected!`, {
             duration: 2000,
           });
+          stopRTCConnection();
+          socket.emit('changeStatus', {
+            user: socket.id,
+            status: 'available',
+            roomName: roomId,
+          });
         }
       }
     });
 
     socket.on('sharingEventCanceled', (info: SocketInit) => {
       stopRTCConnection();
-      setConnected(false);
       toast.error(`Sharing is canceled by ${info.sender.username}`);
     });
 
     socket.on('usersList', (usersInfo: UsersInfo[]) => {
-      console.log(usersInfo);
-      console.log(userId);
       const users = usersInfo.map((user) => ({
         id: user.id,
         name: socket.id === user.id ? `(You) ${user.username}` : user.username,
         status: user.status,
         avatarUrl: `https://robohash.org/${user.username}`,
       }));
-      console.log(users);
       setUsers([...users]);
     });
 
